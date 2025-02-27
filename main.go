@@ -70,6 +70,7 @@ func main() {
 	r := gin.Default()
 
 	r.Use(cors.Default())
+	r.Static("/static", "./static")
 	r.POST("/exec/explorer", PostExecExplorer)
 
 	if err := r.Run(Addr); err != nil {

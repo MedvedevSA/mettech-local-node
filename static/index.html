@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+</head>
+<body>
+    <h1>hello world</h1>
+    <h1>how are you</h1>
+    
+    <div id="app">{{ message }}</div>
+
+    <script>
+    window.addEventListener('message', (event) => {
+        console.log(event)
+    })
+    const { createApp } = Vue
+
+    createApp({
+        data() {
+        return {
+            message: 'Hello Vue!'
+        }
+        }
+    }).mount('#app')
+    </script>
+</body>
+</html>
