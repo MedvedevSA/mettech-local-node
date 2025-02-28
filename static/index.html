@@ -25,7 +25,18 @@
     <div id="app" class="flex flex-col w-full h-full">
       <div v-if="tableRow.length" v-for="tData in tableRow" class="flex">
         <div class="text-gray-400 font-semibold">{{tData.label}}</div>
-        <div class="px-2">{{tData.value}}</div>
+        <div class="px-2 flex flex-col">
+          <span> {{tData.value}} </span>
+          <span
+            v-if="tData.directoryEntries"
+            v-for="item in tData.directoryEntries"
+            class="bg-gray-100 border border-gray-400"
+          >
+            <button @click="fetchExecExplorer(item.path)">
+              {{item.path.split('/').reverse()[0]}}
+            </button>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -37,29 +48,42 @@
           const message = ref("Hello Vue!");
           const tableRow = ref([]);
 
-          function fetchEnrichmentRow(data) {
-            console.log(JSON.stringify(data))
-            return fetch("/EnrichmentRow", {
-              method: 'POST',
+          function fetchExecExplorer(path) {
+            fetch("/exec/explorer", {
+              method: "POST",
               headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json",
               },
-              body: JSON.stringify(data)
-            })
+              body: JSON.stringify({ path: path }),
+            });
+          }
+          function fetchEnrichmentRow(data) {
+            console.log(JSON.stringify(data));
+            return fetch("/EnrichmentRow", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            });
           }
           onMounted(() => {
             window.addEventListener("message", (event) => {
               if (event.origin.includes("googleusercontent.com")) {
                 tableRow.value = JSON.parse(event.data);
-                fetchEnrichmentRow(tableRow.value)
-                  .then((r) => {
-                    console.log(r);
-                  });
+                fetchEnrichmentRow(tableRow.value).then((response) => {
+                  if (response.ok) {
+                    response.json().then((data) => {
+                      tableRow.value = data;
+                    });
+                  }
+                });
               }
             });
           });
 
           return {
+            fetchExecExplorer,
             message,
             tableRow,
           };

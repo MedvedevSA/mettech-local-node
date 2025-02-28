@@ -2,12 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/gin-contrib/cors"
@@ -38,6 +38,19 @@ type Item struct {
 	Value interface{} `json:"value"`
 }
 
+// DirectoryEntry представляет запись директории
+type DirectoryEntry struct {
+	Path  string `json:"path"`
+	IsDir bool   `json:"isDir"`
+}
+
+// ResponseItem представляет элемент с дополнительными данными о директории
+type ResponseItem struct {
+	Label            string            `json:"label"`
+	Value            interface{}       `json:"value"`
+	DirectoryEntries *[]DirectoryEntry `json:"directoryEntries"`
+}
+
 func EnrichmentRow(c *gin.Context) {
 	var items []Item
 
@@ -47,16 +60,47 @@ func EnrichmentRow(c *gin.Context) {
 		return
 	}
 
-	// Проходимся по каждому элементу и выводим label и value
+	var responseItems []ResponseItem
+
 	for _, item := range items {
-		fmt.Printf("Label: %s, Value: %v\n", item.Label, item.Value)
+		respItem := ResponseItem{
+			Label: item.Label,
+			Value: item.Value,
+		}
+
+		// Проверяем, является ли Value строкой
+		if pathStr, ok := item.Value.(string); ok {
+			// Проверяем, существует ли путь и является ли он директорией
+			info, err := os.Stat(pathStr)
+			if err == nil && info.IsDir() {
+				entries, err := os.ReadDir(pathStr)
+				if err == nil {
+					var dirEntries []DirectoryEntry
+					for _, entry := range entries {
+						entryPath := filepath.Join(pathStr, entry.Name())
+						dirEntries = append(dirEntries, DirectoryEntry{
+							Path:  entryPath,
+							IsDir: entry.IsDir(),
+						})
+					}
+					respItem.DirectoryEntries = &dirEntries
+				} else {
+					// Если ошибка при чтении директории, устанавливаем nil
+					respItem.DirectoryEntries = nil
+				}
+			} else {
+				// Если путь не существует или не директория, устанавливаем nil
+				respItem.DirectoryEntries = nil
+			}
+		} else {
+			// Если Value не строка, устанавливаем nil
+			respItem.DirectoryEntries = nil
+		}
+
+		responseItems = append(responseItems, respItem)
 	}
 
-	// Отправляем ответ клиенту
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Данные обработаны успешно",
-	})
+	c.JSON(http.StatusOK, responseItems)
 }
 
 func PostExecExplorer(c *gin.Context) {
