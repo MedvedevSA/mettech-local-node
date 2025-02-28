@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -30,6 +31,32 @@ func IsPathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+type Item struct {
+	Label string      `json:"label"`
+	Value interface{} `json:"value"`
+}
+
+func EnrichmentRow(c *gin.Context) {
+	var items []Item
+
+	// Привязываем JSON из тела запроса к срезу Item
+	if err := c.ShouldBindJSON(&items); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Проходимся по каждому элементу и выводим label и value
+	for _, item := range items {
+		fmt.Printf("Label: %s, Value: %v\n", item.Label, item.Value)
+	}
+
+	// Отправляем ответ клиенту
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Данные обработаны успешно",
+	})
 }
 
 func PostExecExplorer(c *gin.Context) {
@@ -72,6 +99,7 @@ func main() {
 	r.Use(cors.Default())
 	r.Static("/static", "./static")
 	r.POST("/exec/explorer", PostExecExplorer)
+	r.POST("/EnrichmentRow", EnrichmentRow)
 
 	if err := r.Run(Addr); err != nil {
 		log.Printf("Error: %v", err)

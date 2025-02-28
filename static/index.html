@@ -1,31 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-</head>
-<body>
-    <h1>hello world</h1>
-    <h1>how are you</h1>
-    
-    <div id="app">{{ message }}</div>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+      body::-webkit-scrollbar {
+        width: 5px !important;
+        height: 5px !important;
+      }
+      body::-webkit-scrollbar-track {
+        background: gray !important;
+      }
+      body::-webkit-scrollbar-thumb {
+        background-color: #cfc9c5 !important;
+        border: 1px solid gray !important;
+        border-radius: 1px !important;
+      }
+    </style>
+  </head>
+  <body class="flex">
+    <div id="app" class="flex flex-col w-full h-full">
+      <div v-if="tableRow.length" v-for="tData in tableRow" class="flex">
+        <div class="text-gray-400 font-semibold">{{tData.label}}</div>
+        <div class="px-2">{{tData.value}}</div>
+      </div>
+    </div>
 
     <script>
-    window.addEventListener('message', (event) => {
-        console.log(event)
-    })
-    const { createApp } = Vue
+      const { createApp, ref, onMounted } = Vue;
 
-    createApp({
-        data() {
-        return {
-            message: 'Hello Vue!'
-        }
-        }
-    }).mount('#app')
+      createApp({
+        setup() {
+          const message = ref("Hello Vue!");
+          const tableRow = ref([]);
+
+          function fetchEnrichmentRow(data) {
+            console.log(JSON.stringify(data))
+            return fetch("/EnrichmentRow", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(data)
+            })
+          }
+          onMounted(() => {
+            window.addEventListener("message", (event) => {
+              if (event.origin.includes("googleusercontent.com")) {
+                tableRow.value = JSON.parse(event.data);
+                fetchEnrichmentRow(tableRow.value)
+                  .then((r) => {
+                    console.log(r);
+                  });
+              }
+            });
+          });
+
+          return {
+            message,
+            tableRow,
+          };
+        },
+      }).mount("#app");
     </script>
-</body>
+  </body>
 </html>
