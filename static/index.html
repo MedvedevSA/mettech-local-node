@@ -19,30 +19,48 @@
         border: 1px solid gray !important;
         border-radius: 1px !important;
       }
+      button {
+        cursor: pointer;
+      }
     </style>
   </head>
   <body class="flex">
     <div id="app" class="flex flex-col w-full h-full">
-      <div v-if="tableRow.length" v-for="tData in tableRow" class="flex">
+      <div v-if="tableRow.length" v-for="tData in tableRow" class="flex flex-row flex-wrap">
         <div class="text-gray-400 font-semibold">{{tData.label}}</div>
-        <div class="px-2 flex flex-col">
-          <span> {{tData.value}} </span>
-          <span
-            v-if="tData.directoryEntries"
-            v-for="item in tData.directoryEntries"
-            class="bg-gray-100 border border-gray-400"
-          >
-            <button @click="fetchExecExplorer(item.path)">
+        <span
+          v-if="tData.directoryEntries"
+          class="bg-gray-100 border border-gray-400 w-full flex flex-col"
+        >
+          <button class="px-2 text-lefta" @click="fetchExecExplorer(tData.value)"> {{tData.value}} 
+
+        </span>
+          <ui-dropdown>
+            <button v-for="item in tData.directoryEntries" @click="fetchExecExplorer(item.path)">
               {{item.path.split('/').reverse()[0]}}
             </button>
-          </span>
-        </div>
+          </ui-dropdown>
+        </span>
+        <span class="px-2" v-else> {{tData.value}} </span>
       </div>
     </div>
 
     <script>
       const { createApp, ref, onMounted } = Vue;
 
+      const dropdownComponent = {
+        setup() {
+          const message = Vue.ref('Привет из компонента!');
+          return { message };
+        },
+        template: `
+        <div>
+          <p>dt</p>
+          <slot>
+          </slot>
+        </div>
+        `
+      };
       createApp({
         setup() {
           const message = ref("Hello Vue!");
@@ -88,7 +106,9 @@
             tableRow,
           };
         },
-      }).mount("#app");
+      })
+      .component('ui-dropdown', dropdownComponent)
+      .mount("#app");
     </script>
   </body>
 </html>
