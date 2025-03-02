@@ -30,15 +30,19 @@
         <div class="text-gray-400 font-semibold">{{tData.label}}</div>
         <span
           v-if="tData.directoryEntries"
-          class="bg-gray-100 border border-gray-400 w-full flex flex-col"
+          class="bg-gray-100 border border-gray-400 rounded-sm w-full flex flex-col mr-1 overflow-hidden"
         >
-          <button class="px-2 text-lefta" @click="fetchExecExplorer(tData.value)"> {{tData.value}} 
-
-        </span>
           <ui-dropdown>
-            <button v-for="item in tData.directoryEntries" @click="fetchExecExplorer(item.path)">
-              {{item.path.split('/').reverse()[0]}}
-            </button>
+            <template #default>
+              <button class="px-2 text-left hover:bg-gray-200" @click="fetchExecExplorer(tData.value)">
+                {{tData.value}} 
+              </button>
+            </template>
+            <template #show>
+              <button class="px-4 text-left hover:bg-gray-200" v-for="item in tData.directoryEntries" @click="fetchExecExplorer(item.path)">
+                {{item.path.split('/').reverse()[0].split('\\').reverse()[0]}}
+              </button>
+            </template>
           </ui-dropdown>
         </span>
         <span class="px-2" v-else> {{tData.value}} </span>
@@ -50,13 +54,19 @@
 
       const dropdownComponent = {
         setup() {
-          const message = Vue.ref('Привет из компонента!');
-          return { message };
+          const show = ref(false);
+          return { show };
         },
         template: `
-        <div>
-          <p>dt</p>
-          <slot>
+        <div class="flex flex-col">
+          <div class="relative flex flex-col">
+            <button class="absolute right-0 inset-y-0 z-10 hover:scale-120 m-1" @click="show=!show">
+              <img src="/static/ChevronDown.svg" :class="{'rotate-180': show}" width="16" height="16">
+            </button>
+            <slot>
+            </slot>
+          </div>
+          <slot name="show" v-if="show">
           </slot>
         </div>
         `
