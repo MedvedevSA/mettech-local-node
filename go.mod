@@ -1,4 +1,4 @@
-module user-backend/main
+module user-backend/mettech-explorer
 
 go 1.24.0
 
