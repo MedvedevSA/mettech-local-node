@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -52,6 +53,73 @@ type ResponseItem struct {
 	DirectoryEntries *[]DirectoryEntry `json:"directoryEntries"`
 }
 
+// processItems — основная функция обработки списка элементов
+func processItems(items []Item) []ResponseItem {
+	var responseItems []ResponseItem
+	for _, item := range items {
+		respItem := processSingleItem(item)
+		responseItems = append(responseItems, respItem)
+	}
+	return responseItems
+}
+
+// processSingleItem — обработка одного элемента
+func processSingleItem(item Item) ResponseItem {
+	respItem := ResponseItem{
+		Label: item.Label,
+		Value: item.Value,
+	}
+
+	// Проверяем, является ли Value строкой
+	if pathStr, ok := item.Value.(string); ok {
+		// Проверяем, содержит ли строка "\" или "/"
+		if strings.Contains(pathStr, "\\") || strings.Contains(pathStr, "/") {
+			respItem.DirectoryEntries = processPath(pathStr)
+		} else {
+			respItem.DirectoryEntries = nil
+		}
+	} else {
+		respItem.DirectoryEntries = nil
+	}
+
+	return respItem
+}
+
+// processPath — проверка пути и получение данных о директории
+func processPath(pathStr string) *[]DirectoryEntry {
+	info, err := os.Stat(pathStr)
+	if err != nil || !info.IsDir() {
+		log.Printf("Путь \"%s\" не существует или не является директорией: \"%v\"", pathStr, err)
+		return nil
+	}
+
+	return readDirectoryEntries(pathStr)
+}
+
+// readDirectoryEntries — чтение содержимого директории
+func readDirectoryEntries(pathStr string) *[]DirectoryEntry {
+	entries, err := os.ReadDir(pathStr)
+	if err != nil {
+		log.Printf("Ошибка чтения директории \"%s\": \"%v\"", pathStr, err)
+		return nil
+	}
+
+	var dirEntries []DirectoryEntry
+	for _, entry := range entries {
+		dirEntries = append(dirEntries, createDirectoryEntry(pathStr, entry))
+	}
+	return &dirEntries
+}
+
+// createDirectoryEntry — создание записи о файле/папке
+func createDirectoryEntry(pathStr string, entry os.DirEntry) DirectoryEntry {
+	entryPath := filepath.Join(pathStr, entry.Name())
+	return DirectoryEntry{
+		Path:  entryPath,
+		IsDir: entry.IsDir(),
+	}
+}
+
 func EnrichmentRow(c *gin.Context) {
 	var items []Item
 
@@ -61,47 +129,7 @@ func EnrichmentRow(c *gin.Context) {
 		return
 	}
 
-	var responseItems []ResponseItem
-
-	for _, item := range items {
-		respItem := ResponseItem{
-			Label: item.Label,
-			Value: item.Value,
-		}
-
-		// Проверяем, является ли Value строкой
-		if pathStr, ok := item.Value.(string); ok {
-			// Проверяем, существует ли путь и является ли он директорией
-			info, err := os.Stat(pathStr)
-			if err == nil && info.IsDir() {
-				entries, err := os.ReadDir(pathStr)
-				if err == nil {
-					var dirEntries []DirectoryEntry
-					for _, entry := range entries {
-						entryPath := filepath.Join(pathStr, entry.Name())
-						dirEntries = append(dirEntries, DirectoryEntry{
-							Path:  entryPath,
-							IsDir: entry.IsDir(),
-						})
-					}
-					respItem.DirectoryEntries = &dirEntries
-				} else {
-					// Если ошибка при чтении директории, устанавливаем nil
-					respItem.DirectoryEntries = nil
-				}
-			} else {
-				// Если путь не существует или не директория, устанавливаем nil
-				respItem.DirectoryEntries = nil
-			}
-		} else {
-			// Если Value не строка, устанавливаем nil
-			respItem.DirectoryEntries = nil
-		}
-
-		responseItems = append(responseItems, respItem)
-	}
-
-	c.JSON(http.StatusOK, responseItems)
+	c.JSON(http.StatusOK, processItems(items))
 }
 
 func PostExecExplorer(c *gin.Context) {
@@ -150,6 +178,7 @@ func main() {
 
 	// Настраиваем многоцелевой вывод: stdout + файл
 	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw) // Устанавливаем логгер для пакета log
 	gin.DefaultWriter = mw
 
 	r := gin.New()
@@ -163,6 +192,7 @@ func main() {
 	r.POST("/exec/explorer", PostExecExplorer)
 	r.POST("/EnrichmentRow", EnrichmentRow)
 
+	log.Printf("Starting server")
 	if err := r.Run(Addr); err != nil {
 		log.Printf("Error: %v", err)
 	}
