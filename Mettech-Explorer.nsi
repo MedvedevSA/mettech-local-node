@@ -10,11 +10,14 @@
 
 ;--------------------------------
 
+!define APP_NAME "Mettech-Explorer"
+!define EXE_NAME "${APP_NAME}.exe"
+
 ; The name of the installer
-Name "Mettech-Explorer"
+Name "${APP_NAME}"
 
 ; The file to write
-OutFile "Setup Mettech-Explorer.exe"
+OutFile "Setup ${APP_NAME}.exe"
 
 ; Request application privileges for Windows Vista and higher
 RequestExecutionLevel admin
@@ -23,28 +26,33 @@ RequestExecutionLevel admin
 Unicode True
 
 ; The default installation directory
-InstallDir $PROGRAMFILES\Mettech-Explorer
+InstallDir "$PROGRAMFILES\${APP_NAME}"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
-InstallDirRegKey HKLM "Software\NSIS_Mettech-Explorer" "Install_Dir"
+InstallDirRegKey HKLM "Software\NSIS_${APP_NAME}" "Install_Dir"
 
 ;--------------------------------
 
-; Pages
+;--------------------------------
+!include "MUI2.nsh"
+!include "LogicLib.nsh"
 
-Page components
-Page directory
-Page instfiles
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_INSTFILES
+
+; Настройка Finish Page с запуском приложения
+!define MUI_FINISHPAGE_RUN "$INSTDIR\${EXE_NAME}"
+!define MUI_FINISHPAGE_RUN_TEXT "Запустить ${APP_NAME} сейчас"
+!insertmacro MUI_PAGE_FINISH
 
 UninstPage uninstConfirm
 UninstPage instfiles
 
-;--------------------------------
 
-; The stuff to install
-Section "Mettech-Explorer (required)"
+!insertmacro MUI_LANGUAGE "Russian"
 
+Section "MainSection" SEC01
   SectionIn RO
   
   ; Set output path to the installation directory.
@@ -100,6 +108,6 @@ Section "Uninstall"
 
   ; Remove directories
   RMDir "$SMPROGRAMS\Mettech-Explorer"
-  RMDir "$INSTDIR"
+  RMDir /r "$INSTDIR"
 
 SectionEnd

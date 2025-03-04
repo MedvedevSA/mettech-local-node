@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -138,9 +139,26 @@ func PostExecExplorer(c *gin.Context) {
 }
 
 func main() {
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 
+	// Открываем файл для логов
+	logFile, err := os.OpenFile("./.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		panic("Не удалось открыть файл логов: " + err.Error())
+	}
+	defer logFile.Close()
+
+	// Настраиваем многоцелевой вывод: stdout + файл
+	mw := io.MultiWriter(os.Stdout, logFile)
+	gin.DefaultWriter = mw
+
+	r := gin.New()
+
+	// Добавляем middleware для логирования
+	r.Use(gin.LoggerWithWriter(mw))
+	r.Use(gin.Recovery()) // Для обработки паник
 	r.Use(cors.Default())
+
 	r.Static("/static", "./static")
 	r.POST("/exec/explorer", PostExecExplorer)
 	r.POST("/EnrichmentRow", EnrichmentRow)
