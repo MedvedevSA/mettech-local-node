@@ -55,19 +55,19 @@ UninstPage instfiles
 Section "MainSection" SEC01
   SectionIn RO
   
+  SetOutPath "$INSTDIR\static"
+  File /r "./static/*.*"
+
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
   
   ; Put file there
-  File "mettech-explorer.exe"
-  SetOutPath "$INSTDIR\static"
-  File /r "./static/*.*"
+  File "${EXE_NAME}"
   
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\NSIS_Mettech-Explorer "Install_Dir" "$INSTDIR"
 
-  ; Добавить программу в автозапуск для текущего пользователя
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Mettech-Explorer" '"$INSTDIR\mettech-explorer.exe"'
+  ExecWait 'schtasks /create /tn "${APP_NAME}Startup" /tr "\"$INSTDIR\${EXE_NAME}\"" /sc ONLOGON /rl HIGHEST /f'
   
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Mettech-Explorer" "DisplayName" "NSIS Mettech-Explorer"
@@ -93,18 +93,11 @@ SectionEnd
 Section "Uninstall"
   
   ; Удалить программу из автозапуска при деинсталляции
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Mettech-Explorer"
-
-  ; Remove registry keys
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Mettech-Explorer"
-  DeleteRegKey HKLM SOFTWARE\NSIS_Mettech-Explorer
+  ExecWait 'schtasks /delete /tn "${APP_NAME}Startup" /f'
 
   ; Remove files and uninstaller
-  Delete $INSTDIR\mettech-explorer.exe
+  Delete "$INSTDIR\${EXE_NAME}"
   Delete $INSTDIR\uninstall.exe
-
-  ; Remove shortcuts, if any
-  Delete "$SMPROGRAMS\Mettech-Explorer\*.lnk"
 
   ; Remove directories
   RMDir "$SMPROGRAMS\Mettech-Explorer"
